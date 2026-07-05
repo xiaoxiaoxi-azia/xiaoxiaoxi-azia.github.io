@@ -20,6 +20,7 @@
     songGrid: document.querySelector('#songGrid'),
     pagination: document.querySelector('#pagination'),
     videoTrack: document.querySelector('#videoTrack'),
+    liveLink: document.querySelector('#liveLink'),
     toast: document.querySelector('#toast'),
   };
 
@@ -223,6 +224,59 @@
     });
   }
 
+  function isMobileBrowser() {
+    return /Android|iPhone|iPad|iPod|Windows Phone|OpenHarmony/i.test(navigator.userAgent);
+  }
+
+  function openLiveAppWithFallback(event) {
+    if (!isMobileBrowser()) {
+      return;
+    }
+
+    const link = event.currentTarget;
+    const appUrl = link.dataset.appUrl;
+    const webUrl = link.href;
+    if (!appUrl || !webUrl) {
+      return;
+    }
+
+    event.preventDefault();
+
+    let pageHidden = document.hidden;
+    let fallbackTimer;
+
+    function cleanup() {
+      window.clearTimeout(fallbackTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pagehide', handlePageHide);
+    }
+
+    function handleVisibilityChange() {
+      if (!document.hidden) {
+        return;
+      }
+      pageHidden = true;
+      cleanup();
+    }
+
+    function handlePageHide() {
+      pageHidden = true;
+      cleanup();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pagehide', handlePageHide);
+
+    fallbackTimer = window.setTimeout(() => {
+      cleanup();
+      if (!pageHidden && !document.hidden) {
+        window.location.href = webUrl;
+      }
+    }, 3000);
+
+    window.location.href = appUrl;
+  }
+
   function renderSongs() {
     state.pageSize = getPageSize();
     const filtered = getFilteredSongs();
@@ -352,6 +406,8 @@
   }
 
   function bindEvents() {
+    els.liveLink.addEventListener('click', openLiveAppWithFallback);
+
     els.searchInput.addEventListener('input', (event) => {
       state.query = event.target.value;
       state.page = 1;
