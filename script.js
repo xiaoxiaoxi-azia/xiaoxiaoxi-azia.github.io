@@ -178,7 +178,14 @@
     if (!response.ok) {
       throw new Error(`无法加载 ${path}`);
     }
-    return parseCsv(await response.text());
+    const buffer = await response.arrayBuffer();
+    let text;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+    } catch (error) {
+      text = new TextDecoder('gb18030').decode(buffer);
+    }
+    return parseCsv(text.replace(/^\uFEFF/, ''));
   }
 
   function getSinger(song) {
