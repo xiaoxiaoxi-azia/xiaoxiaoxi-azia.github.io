@@ -24,6 +24,12 @@
   };
 
   let toastTimer;
+  let renderFrame;
+  let videoAutoFrame;
+  let videoAutoPreviousTime;
+  let videoAutoPausedUntil = 0;
+  let videoDragState = null;
+  let suppressVideoClick = false;
 
   const collator = new Intl.Collator('zh-Hans-u-co-pinyin', {
     numeric: true,
@@ -210,6 +216,13 @@
     renderSongs();
   }
 
+  function scheduleRenderSongs() {
+    window.cancelAnimationFrame(renderFrame);
+    renderFrame = window.requestAnimationFrame(() => {
+      renderSongs();
+    });
+  }
+
   function renderSongs() {
     state.pageSize = getPageSize();
     const filtered = getFilteredSongs();
@@ -274,6 +287,37 @@
     `).join('');
 
     els.videoTrack.innerHTML = cards + cards;
+  }
+
+  function pauseVideoAutoScroll(duration = 2600) {
+    videoAutoPausedUntil = performance.now() + duration;
+  }
+
+  function startVideoAutoScroll() {
+    const rail = els.videoTrack.closest('.video-rail');
+    window.cancelAnimationFrame(videoAutoFrame);
+    videoAutoPreviousTime = undefined;
+
+    function step(time) {
+      if (videoAutoPreviousTime === undefined) {
+        videoAutoPreviousTime = time;
+      }
+
+      const elapsed = time - videoAutoPreviousTime;
+      videoAutoPreviousTime = time;
+
+      if (time >= videoAutoPausedUntil && !videoDragState && rail.scrollWidth > rail.clientWidth) {
+        rail.scrollLeft += elapsed * 0.035;
+        const resetPoint = Math.max(0, els.videoTrack.scrollWidth / 2);
+        if (resetPoint && rail.scrollLeft >= resetPoint) {
+          rail.scrollLeft -= resetPoint;
+        }
+      }
+
+      videoAutoFrame = window.requestAnimationFrame(step);
+    }
+
+    videoAutoFrame = window.requestAnimationFrame(step);
   }
 
   function showToast(message) {
@@ -362,7 +406,78 @@
     });
 
     window.addEventListener('resize', () => {
-      renderSongs();
+      scheduleRenderSongs();
+    });
+
+    window.addEventListener('load', () => {
+      scheduleRenderSongs();
+    });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(scheduleRenderSongs).catch(() => {});
+    }
+  }
+
+  function bindVideoDrag() {
+    const rail = els.videoTrack.closest('.video-rail');
+
+    rail.addEventListener('pointerdown', (event) => {
+      pauseVideoAutoScroll();
+
+      if (event.pointerType !== 'mouse' || event.button !== 0) {
+        return;
+      }
+
+      videoDragState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        scrollLeft: rail.scrollLeft,
+        moved: false,
+      };
+      rail.classList.add('is-dragging');
+      rail.setPointerCapture(event.pointerId);
+    });
+
+    rail.addEventListener('pointermove', (event) => {
+      if (!videoDragState || event.pointerId !== videoDragState.pointerId) {
+        return;
+      }
+
+      const deltaX = event.clientX - videoDragState.startX;
+      if (Math.abs(deltaX) > 3) {
+        videoDragState.moved = true;
+      }
+      rail.scrollLeft = videoDragState.scrollLeft - deltaX;
+    });
+
+    function stopVideoDrag(event) {
+      if (!videoDragState || event.pointerId !== videoDragState.pointerId) {
+        return;
+      }
+
+      suppressVideoClick = videoDragState.moved;
+      videoDragState = null;
+      rail.classList.remove('is-dragging');
+      window.setTimeout(() => {
+        suppressVideoClick = false;
+      }, 0);
+    }
+
+    rail.addEventListener('pointerup', stopVideoDrag);
+    rail.addEventListener('pointercancel', stopVideoDrag);
+    rail.addEventListener('click', (event) => {
+      if (!suppressVideoClick) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+    }, true);
+
+    rail.addEventListener('mouseenter', () => {
+      pauseVideoAutoScroll(900);
+    });
+    rail.addEventListener('focusin', () => {
+      pauseVideoAutoScroll(1800);
     });
   }
 
@@ -376,10 +491,12 @@
       state.songs = results[0].filter((song) => song.title);
       state.videos = results[1].filter((video) => video.title && video.url);
 
-      renderCategories();
-      renderSongs();
       renderVideos();
+      renderCategories();
       bindEvents();
+      bindVideoDrag();
+      startVideoAutoScroll();
+      scheduleRenderSongs();
     } catch (error) {
       els.statusMessage.textContent = `${error.message}。请通过本地服务器或 GitHub Pages 打开页面。`;
       els.resultSummary.textContent = '加载失败';

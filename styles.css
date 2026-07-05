@@ -395,6 +395,7 @@ h2 {
   justify-content: center;
   gap: 5px;
   flex-wrap: wrap;
+  min-height: 40px;
   padding-top: 10px;
 }
 
@@ -443,19 +444,32 @@ h2 {
 }
 
 .video-rail {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+.video-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.video-rail.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.video-rail.is-dragging .video-card {
+  pointer-events: none;
 }
 
 .video-track {
   display: flex;
   gap: 8px;
   width: max-content;
-  animation: video-scroll 58s linear infinite;
-}
-
-.video-rail:hover .video-track,
-.video-rail:focus-within .video-track {
-  animation-play-state: paused;
+  min-width: max-content;
 }
 
 .video-card {
@@ -533,16 +547,6 @@ h2 {
 .toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0);
-}
-
-@keyframes video-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-50% - 4px));
-  }
 }
 
 @media (max-width: 820px) {
