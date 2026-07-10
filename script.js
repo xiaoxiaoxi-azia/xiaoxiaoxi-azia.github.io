@@ -11,7 +11,7 @@
 
   const els = {
     songCount: document.querySelector('#songCount'),
-    randomSong: document.querySelector('#randomSong'),
+    randomSongs: document.querySelectorAll('[data-random-song]'),
     resultSummary: document.querySelector('#resultSummary'),
     searchInput: document.querySelector('#searchInput'),
     categoryFilters: document.querySelector('#categoryFilters'),
@@ -488,8 +488,10 @@
 
   function bindEvents() {
     els.liveLink.addEventListener('click', openLiveAppWithFallback);
-    els.randomSong.addEventListener('click', () => {
-      copyRandomSong();
+    els.randomSongs.forEach((button) => {
+      button.addEventListener('click', () => {
+        copyRandomSong();
+      });
     });
 
     els.searchInput.addEventListener('input', (event) => {
@@ -648,6 +650,7 @@
       state.songs = results[0].filter((song) => song.title);
       state.videos = results[1].filter((video) => video.title && video.url);
       els.songCount.textContent = `${state.songs.length} 首可点歌曲`;
+      els.songCount.dataset.mobileText = `${state.songs.length}首`;
 
       renderVideos();
       renderCategories();
@@ -659,6 +662,7 @@
     } catch (error) {
       els.statusMessage.textContent = `${error.message}。请通过本地服务器或 GitHub Pages 打开页面。`;
       els.songCount.textContent = '加载失败';
+      els.songCount.dataset.mobileText = '加载失败';
       els.resultSummary.textContent = '加载失败';
     }
   }

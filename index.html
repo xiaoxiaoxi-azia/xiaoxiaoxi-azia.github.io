@@ -24,6 +24,7 @@
           <span>笑笑嬉 Azia</span>
         </a>
         <div class="nav-actions">
+          <button id="randomSongMobile" class="random-song random-song-mobile" type="button" data-random-song>✦ 随机点歌</button>
           <a id="liveLink" class="live-link" href="https://live.bilibili.com/1828188123" data-app-url="bilibili://live/1828188123" target="_blank" rel="noreferrer">进入直播间</a>
           <a class="bili-link" href="https://space.bilibili.com/3546895548943133" target="_blank" rel="noreferrer">Bilibili</a>
         </div>
@@ -39,8 +40,8 @@
             <p class="playlist-hint">选一首喜欢的歌，复制口令去直播间点歌</p>
           </div>
           <div class="hero-actions">
-            <button id="randomSong" class="random-song" type="button">✦ 随机点歌</button>
-            <p id="songCount" class="song-count">正在加载歌单...</p>
+            <button id="randomSong" class="random-song random-song-hero" type="button" data-random-song>✦ 随机点歌</button>
+            <p id="songCount" class="song-count" data-mobile-text="加载中">正在加载歌单...</p>
           </div>
         </div>
 
@@ -61,9 +62,9 @@
               <label class="mobile-select">
                 <span class="sr-only">排序</span>
                 <select id="sortSelect" aria-label="排序方式">
-                  <option value="default">默认排序</option>
+                  <option value="default">默认</option>
                   <option value="initial">首字母</option>
-                  <option value="length">按长短</option>
+                  <option value="length">长短</option>
                 </select>
               </label>
             </div>
