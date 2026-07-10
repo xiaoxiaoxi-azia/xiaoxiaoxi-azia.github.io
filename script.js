@@ -26,11 +26,14 @@
     toast: document.querySelector('#toast'),
   };
 
+  const VIDEO_AUTO_PIXELS_PER_SECOND = 60;
   let toastTimer;
   let renderFrame;
   let videoAutoFrame;
   let videoAutoPreviousTime;
   let videoAutoPausedUntil = 0;
+  let videoAutoPosition = 0;
+  let videoAutoElapsed = 0;
   let videoRailKeyboardFocused = false;
   let videoDragState = null;
   let suppressVideoClick = false;
@@ -397,6 +400,8 @@
     const rail = els.videoTrack.closest('.video-rail');
     window.cancelAnimationFrame(videoAutoFrame);
     videoAutoPreviousTime = undefined;
+    videoAutoPosition = Math.max(0, Math.round(rail.scrollLeft));
+    videoAutoElapsed = 0;
 
     function step(time) {
       const elapsed = videoAutoPreviousTime === undefined
@@ -404,18 +409,29 @@
         : Math.min(64, Math.max(0, time - videoAutoPreviousTime));
       videoAutoPreviousTime = time;
 
-      if (
+      const canAutoScroll = (
         !document.hidden
         && time >= videoAutoPausedUntil
         && !videoDragState
         && !videoRailKeyboardFocused
         && rail.scrollWidth > rail.clientWidth
-      ) {
-        rail.scrollLeft += elapsed * 0.035;
-        const resetPoint = Math.max(0, els.videoTrack.scrollWidth / 2);
-        if (resetPoint && rail.scrollLeft >= resetPoint) {
-          rail.scrollLeft %= resetPoint;
+      );
+
+      if (canAutoScroll) {
+        videoAutoElapsed += elapsed;
+        const pixelsToMove = Math.floor(videoAutoElapsed * VIDEO_AUTO_PIXELS_PER_SECOND / 1000);
+        if (pixelsToMove > 0) {
+          videoAutoElapsed -= pixelsToMove * 1000 / VIDEO_AUTO_PIXELS_PER_SECOND;
+          videoAutoPosition += pixelsToMove;
+          const resetPoint = Math.max(0, Math.floor(els.videoTrack.scrollWidth / 2));
+          if (resetPoint && videoAutoPosition >= resetPoint) {
+            videoAutoPosition %= resetPoint;
+          }
+          rail.scrollLeft = videoAutoPosition;
         }
+      } else {
+        videoAutoPosition = Math.max(0, Math.round(rail.scrollLeft));
+        videoAutoElapsed = 0;
       }
 
       videoAutoFrame = window.requestAnimationFrame(step);
@@ -429,6 +445,7 @@
       window.cancelAnimationFrame(videoAutoFrame);
       videoAutoFrame = undefined;
       videoAutoPreviousTime = undefined;
+      videoAutoElapsed = 0;
       return;
     }
 

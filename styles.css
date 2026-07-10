@@ -10,6 +10,7 @@
   --faint: #5e5060;
   --glass: rgba(255, 255, 255, 0.48);
   --glass-strong: rgba(255, 255, 255, 0.72);
+  --glass-static: rgba(255, 255, 255, 0.64);
   --glass-line: rgba(255, 255, 255, 0.76);
   --shadow-soft: 0 10px 28px rgba(76, 49, 86, 0.08);
   --shadow-lift: 0 16px 34px rgba(76, 49, 86, 0.14);
@@ -184,7 +185,7 @@ main {
   border: 1px solid var(--glass-line);
   border-radius: 999px;
   font-size: 13px;
-  transition: color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition: color 0.16s ease, border-color 0.16s ease;
 }
 
 .live-link {
@@ -199,24 +200,13 @@ main {
   background: rgba(255, 255, 255, 0.42);
 }
 
-.live-link:hover,
-.live-link:focus-visible,
-.bili-link:hover,
-.bili-link:focus-visible {
-  outline: none;
-  transform: translateY(-1px);
+.live-link:hover {
+  border-color: rgba(255, 255, 255, 0.38);
 }
 
-.live-link:hover,
-.live-link:focus-visible {
-  background: var(--iris-deep);
-  box-shadow: 0 10px 26px rgba(82, 56, 91, 0.28);
-}
-
-.bili-link:hover,
-.bili-link:focus-visible {
+.bili-link:hover {
   color: var(--iris-deep);
-  background: var(--glass-strong);
+  border-color: rgba(118, 82, 127, 0.28);
 }
 
 main {
@@ -309,10 +299,8 @@ h2 {
 .page-select,
 .video-card {
   border: 1px solid var(--glass-line);
-  background: var(--glass);
+  background: var(--glass-static);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 .random-song {
@@ -326,19 +314,15 @@ h2 {
   cursor: pointer;
   font-size: 12px;
   font-weight: 750;
-  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition: border-color 0.16s ease;
 }
 
 .random-song-mobile {
   display: none;
 }
 
-.random-song:hover,
-.random-song:focus-visible {
-  background: var(--iris-deep);
-  box-shadow: 0 10px 26px rgba(82, 56, 91, 0.24);
-  outline: none;
-  transform: translateY(-1px);
+.random-song:hover {
+  border-color: rgba(255, 255, 255, 0.42);
 }
 
 .song-count {
@@ -449,14 +433,11 @@ h2 {
   background: transparent;
   cursor: pointer;
   font-size: 12px;
-  transition: color 0.16s ease, background 0.16s ease;
+  transition: color 0.16s ease;
 }
 
-.segmented button:hover,
-.segmented button:focus-visible {
+.segmented button:hover {
   color: var(--iris-deep);
-  background: rgba(255, 255, 255, 0.52);
-  outline: none;
 }
 
 .segmented button.is-active,
@@ -559,16 +540,11 @@ h2 {
   color: var(--ink);
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition: border-color 0.16s ease;
 }
 
-.song-row:hover,
-.song-row:focus-visible {
-  border-color: rgba(255, 255, 255, 0.92);
-  background: var(--glass-strong);
-  box-shadow: var(--shadow-lift);
-  outline: none;
-  transform: translateY(-2px);
+.song-row:hover {
+  border-color: rgba(255, 255, 255, 0.94);
 }
 
 .song-title {
@@ -661,16 +637,12 @@ h2 {
   color: var(--muted);
   cursor: pointer;
   font-size: 12px;
-  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+  transition: color 0.16s ease, border-color 0.16s ease;
 }
 
-.pagination button:hover:not(:disabled),
-.pagination button:focus-visible {
+.pagination button:hover:not(:disabled) {
   border-color: rgba(118, 82, 127, 0.28);
   color: var(--iris-deep);
-  background: var(--glass-strong);
-  outline: none;
-  transform: translateY(-1px);
 }
 
 .pagination button:disabled {
@@ -747,16 +719,27 @@ h2 {
   overflow: hidden;
   border-radius: 12px;
   color: var(--ink);
-  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  transition: border-color 0.16s ease;
 }
 
-.video-card:hover,
-.video-card:focus-visible {
+.video-card:hover {
   border-color: rgba(255, 255, 255, 0.94);
-  background: var(--glass-strong);
-  box-shadow: var(--shadow-lift);
-  outline: none;
-  transform: translateY(-1px);
+}
+
+.live-link:focus-visible,
+.bili-link:focus-visible,
+.random-song:focus-visible,
+.segmented button:not(.is-active):focus-visible,
+.song-row:focus-visible,
+.pagination button:not(.is-active):focus-visible,
+.video-card:focus-visible {
+  outline: 2px solid var(--iris-deep);
+  outline-offset: 2px;
+}
+
+.song-row:focus-visible,
+.video-card:focus-visible {
+  outline-offset: -3px;
 }
 
 .video-card img {
