@@ -31,8 +31,7 @@
   let videoAutoFrame;
   let videoAutoPreviousTime;
   let videoAutoPausedUntil = 0;
-  let videoRailHovered = false;
-  let videoRailFocusWithin = false;
+  let videoRailKeyboardFocused = false;
   let videoDragState = null;
   let suppressVideoClick = false;
   const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -400,24 +399,22 @@
     videoAutoPreviousTime = undefined;
 
     function step(time) {
-      if (videoAutoPreviousTime === undefined) {
-        videoAutoPreviousTime = time;
-      }
-
-      const elapsed = time - videoAutoPreviousTime;
+      const elapsed = videoAutoPreviousTime === undefined
+        ? 0
+        : Math.min(64, Math.max(0, time - videoAutoPreviousTime));
       videoAutoPreviousTime = time;
 
       if (
-        time >= videoAutoPausedUntil
+        !document.hidden
+        && time >= videoAutoPausedUntil
         && !videoDragState
-        && !videoRailHovered
-        && !videoRailFocusWithin
+        && !videoRailKeyboardFocused
         && rail.scrollWidth > rail.clientWidth
       ) {
         rail.scrollLeft += elapsed * 0.035;
         const resetPoint = Math.max(0, els.videoTrack.scrollWidth / 2);
         if (resetPoint && rail.scrollLeft >= resetPoint) {
-          rail.scrollLeft -= resetPoint;
+          rail.scrollLeft %= resetPoint;
         }
       }
 
@@ -432,6 +429,15 @@
       window.cancelAnimationFrame(videoAutoFrame);
       videoAutoFrame = undefined;
       videoAutoPreviousTime = undefined;
+      return;
+    }
+
+    startVideoAutoScroll();
+  }
+
+  function handleVideoVisibilityChange() {
+    videoAutoPreviousTime = undefined;
+    if (document.hidden || reducedMotionQuery.matches) {
       return;
     }
 
@@ -573,9 +579,12 @@
     const rail = els.videoTrack.closest('.video-rail');
 
     rail.addEventListener('pointerdown', (event) => {
-      pauseVideoAutoScroll();
+      if (event.pointerType !== 'mouse') {
+        pauseVideoAutoScroll();
+        return;
+      }
 
-      if (event.pointerType !== 'mouse' || event.button !== 0) {
+      if (event.button !== 0) {
         return;
       }
 
@@ -624,18 +633,15 @@
       event.stopPropagation();
     }, true);
 
-    rail.addEventListener('mouseenter', () => {
-      videoRailHovered = true;
-    });
-    rail.addEventListener('mouseleave', () => {
-      videoRailHovered = false;
-    });
-    rail.addEventListener('focusin', () => {
-      videoRailFocusWithin = true;
+    rail.addEventListener('wheel', () => {
+      pauseVideoAutoScroll(1200);
+    }, { passive: true });
+    rail.addEventListener('focusin', (event) => {
+      videoRailKeyboardFocused = event.target.matches(':focus-visible');
     });
     rail.addEventListener('focusout', (event) => {
       if (!rail.contains(event.relatedTarget)) {
-        videoRailFocusWithin = false;
+        videoRailKeyboardFocused = false;
       }
     });
   }
@@ -658,6 +664,7 @@
       bindVideoDrag();
       startVideoAutoScroll();
       reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+      document.addEventListener('visibilitychange', handleVideoVisibilityChange);
       scheduleRenderSongs();
     } catch (error) {
       els.statusMessage.textContent = `${error.message}。请通过本地服务器或 GitHub Pages 打开页面。`;
