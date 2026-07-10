@@ -75,7 +75,7 @@ select {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background-image: url("assets/azia-songbook-desktop.png");
+  background-image: url("assets/azia-songbook-desktop-anime.png");
   background-position: center right;
   background-repeat: no-repeat;
   background-size: cover;
@@ -292,18 +292,49 @@ h2 {
   font-size: 13px;
 }
 
+.hero-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .song-count,
+.random-song,
 .search-field,
 .segmented,
 .mobile-select,
 .song-row,
 .pagination button,
+.page-select,
 .video-card {
   border: 1px solid var(--glass-line);
   background: var(--glass);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
+}
+
+.random-song {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 13px;
+  border-radius: 999px;
+  color: #fffaf6;
+  background: var(--iris);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.random-song:hover,
+.random-song:focus-visible {
+  background: var(--iris-deep);
+  box-shadow: 0 10px 26px rgba(82, 56, 91, 0.24);
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .song-count {
@@ -430,6 +461,30 @@ h2 {
   background: var(--iris);
 }
 
+.page-select {
+  min-height: 30px;
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  border-radius: 10px;
+}
+
+.page-select select {
+  min-height: 28px;
+  padding: 0 28px 0 9px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  outline: none;
+}
+
+.page-select:focus-within {
+  border-color: rgba(118, 82, 127, 0.46);
+  box-shadow: 0 0 0 3px rgba(118, 82, 127, 0.1), var(--shadow-soft);
+}
+
 .playlist-meta {
   min-width: 0;
   min-height: 26px;
@@ -522,11 +577,13 @@ h2 {
   white-space: nowrap;
 }
 
-.song-title-text {
+.song-title-text,
+.song-singer-text {
   display: inline;
 }
 
-.song-title.is-scrollable .song-title-text {
+.song-title.is-scrollable .song-title-text,
+.song-singer.is-scrollable .song-singer-text {
   will-change: transform;
 }
 
@@ -535,11 +592,11 @@ h2 {
 .song-row:focus-visible .song-title.is-scrollable .song-title-text {
   display: inline-block;
   min-width: 100%;
-  animation: song-title-scroll var(--title-scroll-duration, 4.8s) ease-in-out infinite alternate;
+  animation: song-text-scroll var(--song-scroll-duration, 4.8s) ease-in-out infinite alternate;
   text-overflow: clip;
 }
 
-@keyframes song-title-scroll {
+@keyframes song-text-scroll {
   0%,
   18% {
     transform: translateX(0);
@@ -547,7 +604,7 @@ h2 {
 
   82%,
   100% {
-    transform: translateX(calc(var(--title-scroll-distance, 0px) * -1));
+    transform: translateX(calc(var(--song-scroll-distance, 0px) * -1));
   }
 }
 
@@ -559,6 +616,15 @@ h2 {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.song-singer:hover .song-singer-text,
+.song-row:focus .song-singer.is-scrollable .song-singer-text,
+.song-row:focus-visible .song-singer.is-scrollable .song-singer-text {
+  display: inline-block;
+  min-width: 100%;
+  animation: song-text-scroll var(--song-scroll-duration, 4.8s) ease-in-out infinite alternate;
+  text-overflow: clip;
 }
 
 .song-category {
@@ -795,9 +861,9 @@ h2 {
 
 @media (max-width: 520px) {
   .character-backdrop {
-    background-image: url("assets/azia-songbook-mobile.png");
+    background-image: url("assets/azia-songbook-mobile-anime.png");
     background-position: right center;
-    opacity: 0.18;
+    opacity: 0.24;
     -webkit-mask-image: linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.82) 44%, transparent 88%);
     mask-image: linear-gradient(to left, #000 0%, rgba(0, 0, 0, 0.82) 44%, transparent 88%);
   }
@@ -871,7 +937,18 @@ h2 {
   .song-count {
     min-height: 30px;
     display: inline-flex;
+    margin-top: 0;
+    order: 1;
+  }
+
+  .hero-actions {
     margin-top: 10px;
+  }
+
+  .random-song {
+    min-height: 44px;
+    order: 2;
+    margin-left: auto;
   }
 
   .playlist-tools {
@@ -947,14 +1024,48 @@ h2 {
   }
 
   .pagination {
-    gap: 4px;
+    flex-wrap: nowrap;
+    gap: 3px;
     padding-top: 7px;
+  }
+
+  .pagination-page-number {
+    display: none;
+  }
+
+  .pagination-first {
+    order: 1;
+  }
+
+  .pagination-prev {
+    order: 2;
+  }
+
+  .page-select {
+    order: 3;
+  }
+
+  .pagination-next {
+    order: 4;
+  }
+
+  .pagination-last {
+    order: 5;
   }
 
   .pagination button {
     min-width: 30px;
     min-height: 40px;
-    padding: 0 8px;
+    padding: 0 6px;
+  }
+
+  .page-select,
+  .page-select select {
+    min-height: 40px;
+  }
+
+  .page-select select {
+    padding-right: 22px;
   }
 
   .video-card {
@@ -977,7 +1088,8 @@ h2 {
     animation-iteration-count: 1 !important;
   }
 
-  .song-title-text {
+  .song-title-text,
+  .song-singer-text {
     transform: none !important;
   }
 }

@@ -11,6 +11,7 @@
 
   const els = {
     songCount: document.querySelector('#songCount'),
+    randomSong: document.querySelector('#randomSong'),
     resultSummary: document.querySelector('#resultSummary'),
     searchInput: document.querySelector('#searchInput'),
     categoryFilters: document.querySelector('#categoryFilters'),
@@ -299,13 +300,13 @@
     window.location.href = appUrl;
   }
 
-  function prepareSongTitleScroll() {
+  function prepareSongTextScroll() {
     window.requestAnimationFrame(() => {
-      els.songGrid.querySelectorAll('.song-title').forEach((title) => {
-        const overflow = Math.ceil(title.scrollWidth - title.clientWidth);
-        title.classList.toggle('is-scrollable', overflow > 2);
-        title.style.setProperty('--title-scroll-distance', `${Math.max(0, overflow)}px`);
-        title.style.setProperty('--title-scroll-duration', `${Math.min(7.5, Math.max(4.2, overflow / 18 + 3.2))}s`);
+      els.songGrid.querySelectorAll('.song-title, .song-singer').forEach((field) => {
+        const overflow = Math.ceil(field.scrollWidth - field.clientWidth);
+        field.classList.toggle('is-scrollable', overflow > 2);
+        field.style.setProperty('--song-scroll-distance', `${Math.max(0, overflow)}px`);
+        field.style.setProperty('--song-scroll-duration', `${Math.min(5.4, Math.max(2.8, overflow / 26 + 2.2))}s`);
       });
     });
   }
@@ -328,11 +329,11 @@
       els.songGrid.innerHTML = pageItems.map((song) => `
         <button type="button" class="song-row" data-title="${escapeAttribute(song.title)}" title="复制：点歌 ${escapeAttribute(song.title)}">
           <div class="song-title"><span class="song-title-text">${escapeHtml(song.title)}</span></div>
-          <div class="song-singer">${escapeHtml(getSinger(song))}</div>
+          <div class="song-singer"><span class="song-singer-text">${escapeHtml(getSinger(song))}</span></div>
           <div class="song-category">${escapeHtml(song.category)}</div>
         </button>
       `).join('');
-      prepareSongTitleScroll();
+      prepareSongTextScroll();
     }
 
     renderPagination(totalPages);
@@ -346,11 +347,19 @@
     const start = Math.min(Math.max(1, state.page - halfWindow), maxStart);
     const end = Math.min(totalPages, start + visiblePages - 1);
 
-    pageButtons.push(`<button type="button" data-page="${state.page - 1}" ${state.page === 1 ? 'disabled' : ''}>上一页</button>`);
+    pageButtons.push(`<button type="button" class="pagination-first" data-page="1" ${state.page === 1 ? 'disabled' : ''}>首页</button>`);
+    pageButtons.push(`<button type="button" class="pagination-prev" data-page="${state.page - 1}" ${state.page === 1 ? 'disabled' : ''}>上一页</button>`);
     for (let page = start; page <= end; page += 1) {
-      pageButtons.push(`<button type="button" data-page="${page}" class="${page === state.page ? 'is-active' : ''}">${page}</button>`);
+      pageButtons.push(`<button type="button" data-page="${page}" class="pagination-page-number${page === state.page ? ' is-active' : ''}">${page}</button>`);
     }
-    pageButtons.push(`<button type="button" data-page="${state.page + 1}" ${state.page === totalPages ? 'disabled' : ''}>下一页</button>`);
+    pageButtons.push(`<button type="button" class="pagination-next" data-page="${state.page + 1}" ${state.page === totalPages ? 'disabled' : ''}>下一页</button>`);
+    pageButtons.push(`<button type="button" class="pagination-last" data-page="${totalPages}" ${state.page === totalPages ? 'disabled' : ''}>末页</button>`);
+
+    const pageOptions = Array.from({ length: totalPages }, (_, index) => {
+      const page = index + 1;
+      return `<option value="${page}"${page === state.page ? ' selected' : ''}>第 ${page} / ${totalPages} 页</option>`;
+    }).join('');
+    pageButtons.push(`<label class="page-select"><span class="sr-only">选择页码</span><select id="pageSelect" aria-label="选择页码">${pageOptions}</select></label>`);
 
     els.pagination.innerHTML = pageButtons.join('');
   }
@@ -453,15 +462,35 @@
   async function copySong(title) {
     const command = `点歌 ${title}`;
     if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(command);
+      try {
+        await navigator.clipboard.writeText(command);
+      } catch (error) {
+        fallbackCopy(command);
+      }
     } else {
       fallbackCopy(command);
     }
     showToast(`已复制“${command}”，快去直播间点歌吧～`);
   }
 
+  function copyRandomSong() {
+    const candidates = getFilteredSongs();
+    if (candidates.length === 0) {
+      showToast('当前筛选下没有可随机的歌曲。');
+      return;
+    }
+
+    const song = candidates[Math.floor(Math.random() * candidates.length)];
+    copySong(song.title).catch(() => {
+      showToast('复制失败，请再试一次。');
+    });
+  }
+
   function bindEvents() {
     els.liveLink.addEventListener('click', openLiveAppWithFallback);
+    els.randomSong.addEventListener('click', () => {
+      copyRandomSong();
+    });
 
     els.searchInput.addEventListener('input', (event) => {
       state.query = event.target.value;
@@ -513,6 +542,15 @@
         return;
       }
       state.page = Number(button.dataset.page);
+      renderSongs();
+    });
+
+    els.pagination.addEventListener('change', (event) => {
+      const select = event.target.closest('#pageSelect');
+      if (!select) {
+        return;
+      }
+      state.page = Number(select.value);
       renderSongs();
     });
 
