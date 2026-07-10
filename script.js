@@ -10,6 +10,7 @@
   };
 
   const els = {
+    songCount: document.querySelector('#songCount'),
     resultSummary: document.querySelector('#resultSummary'),
     searchInput: document.querySelector('#searchInput'),
     categoryFilters: document.querySelector('#categoryFilters'),
@@ -29,8 +30,11 @@
   let videoAutoFrame;
   let videoAutoPreviousTime;
   let videoAutoPausedUntil = 0;
+  let videoRailHovered = false;
+  let videoRailFocusWithin = false;
   let videoDragState = null;
   let suppressVideoClick = false;
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const collator = new Intl.Collator('zh-Hans-u-co-pinyin', {
     numeric: true,
@@ -173,19 +177,30 @@
     return columns * rows;
   }
 
+  function decodeCsvBuffer(buffer) {
+    const bytes = new Uint8Array(buffer);
+
+    if (bytes[0] === 0xff && bytes[1] === 0xfe) {
+      return new TextDecoder('utf-16le').decode(bytes.subarray(2));
+    }
+
+    if (bytes[0] === 0xfe && bytes[1] === 0xff) {
+      return new TextDecoder('utf-16be').decode(bytes.subarray(2));
+    }
+
+    try {
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\uFEFF/, '');
+    } catch (error) {
+      return new TextDecoder('gb18030').decode(bytes).replace(/^\uFEFF/, '');
+    }
+  }
+
   async function loadCsv(path) {
     const response = await fetch(path, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`无法加载 ${path}`);
     }
-    const buffer = await response.arrayBuffer();
-    let text;
-    try {
-      text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-    } catch (error) {
-      text = new TextDecoder('gb18030').decode(buffer);
-    }
-    return parseCsv(text.replace(/^\uFEFF/, ''));
+    return parseCsv(decodeCsvBuffer(await response.arrayBuffer()));
   }
 
   function getSinger(song) {
@@ -284,6 +299,17 @@
     window.location.href = appUrl;
   }
 
+  function prepareSongTitleScroll() {
+    window.requestAnimationFrame(() => {
+      els.songGrid.querySelectorAll('.song-title').forEach((title) => {
+        const overflow = Math.ceil(title.scrollWidth - title.clientWidth);
+        title.classList.toggle('is-scrollable', overflow > 2);
+        title.style.setProperty('--title-scroll-distance', `${Math.max(0, overflow)}px`);
+        title.style.setProperty('--title-scroll-duration', `${Math.min(7.5, Math.max(4.2, overflow / 18 + 3.2))}s`);
+      });
+    });
+  }
+
   function renderSongs() {
     state.pageSize = getPageSize();
     const filtered = getFilteredSongs();
@@ -301,11 +327,12 @@
       els.statusMessage.textContent = '';
       els.songGrid.innerHTML = pageItems.map((song) => `
         <button type="button" class="song-row" data-title="${escapeAttribute(song.title)}" title="复制：点歌 ${escapeAttribute(song.title)}">
-          <div class="song-title">${escapeHtml(song.title)}</div>
+          <div class="song-title"><span class="song-title-text">${escapeHtml(song.title)}</span></div>
           <div class="song-singer">${escapeHtml(getSinger(song))}</div>
           <div class="song-category">${escapeHtml(song.category)}</div>
         </button>
       `).join('');
+      prepareSongTitleScroll();
     }
 
     renderPagination(totalPages);
@@ -355,6 +382,10 @@
   }
 
   function startVideoAutoScroll() {
+    if (reducedMotionQuery.matches) {
+      return;
+    }
+
     const rail = els.videoTrack.closest('.video-rail');
     window.cancelAnimationFrame(videoAutoFrame);
     videoAutoPreviousTime = undefined;
@@ -367,7 +398,13 @@
       const elapsed = time - videoAutoPreviousTime;
       videoAutoPreviousTime = time;
 
-      if (time >= videoAutoPausedUntil && !videoDragState && rail.scrollWidth > rail.clientWidth) {
+      if (
+        time >= videoAutoPausedUntil
+        && !videoDragState
+        && !videoRailHovered
+        && !videoRailFocusWithin
+        && rail.scrollWidth > rail.clientWidth
+      ) {
         rail.scrollLeft += elapsed * 0.035;
         const resetPoint = Math.max(0, els.videoTrack.scrollWidth / 2);
         if (resetPoint && rail.scrollLeft >= resetPoint) {
@@ -379,6 +416,17 @@
     }
 
     videoAutoFrame = window.requestAnimationFrame(step);
+  }
+
+  function handleReducedMotionChange(event) {
+    if (event.matches) {
+      window.cancelAnimationFrame(videoAutoFrame);
+      videoAutoFrame = undefined;
+      videoAutoPreviousTime = undefined;
+      return;
+    }
+
+    startVideoAutoScroll();
   }
 
   function showToast(message) {
@@ -537,10 +585,18 @@
     }, true);
 
     rail.addEventListener('mouseenter', () => {
-      pauseVideoAutoScroll(900);
+      videoRailHovered = true;
+    });
+    rail.addEventListener('mouseleave', () => {
+      videoRailHovered = false;
     });
     rail.addEventListener('focusin', () => {
-      pauseVideoAutoScroll(1800);
+      videoRailFocusWithin = true;
+    });
+    rail.addEventListener('focusout', (event) => {
+      if (!rail.contains(event.relatedTarget)) {
+        videoRailFocusWithin = false;
+      }
     });
   }
 
@@ -553,15 +609,18 @@
 
       state.songs = results[0].filter((song) => song.title);
       state.videos = results[1].filter((video) => video.title && video.url);
+      els.songCount.textContent = `${state.songs.length} 首可点歌曲`;
 
       renderVideos();
       renderCategories();
       bindEvents();
       bindVideoDrag();
       startVideoAutoScroll();
+      reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
       scheduleRenderSongs();
     } catch (error) {
       els.statusMessage.textContent = `${error.message}。请通过本地服务器或 GitHub Pages 打开页面。`;
+      els.songCount.textContent = '加载失败';
       els.resultSummary.textContent = '加载失败';
     }
   }
